@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yt-cli-player"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+    "google-api-python-client>=2.0",
+    "google-auth-oauthlib>=1.0",
+    "keyring>=24.0",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+yt-music = "yt_cli_player.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["yt_cli_player*"]

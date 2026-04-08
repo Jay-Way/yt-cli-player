@@ -1,0 +1,118 @@
+import random
+import shutil
+import sys
+
+import click
+from rich.console import Console
+
+console = Console()
+
+
+@click.group()
+def main():
+    """yt-music — play YouTube playlists from the terminal, audio only."""
+
+
+@main.command()
+def login():
+    """Authenticate with your YouTube account via OAuth."""
+    from yt_cli_player.auth.oauth import login as do_login
+    try:
+        channel = do_login()
+        console.print(f"[green]Logged in as:[/green] {channel}")
+    except FileNotFoundError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
+@main.command()
+def logout():
+    """Clear stored authentication token."""
+    from yt_cli_player.auth.token_store import delete_token
+    delete_token()
+    console.print("[yellow]Logged out.[/yellow]")
+
+
+@main.command()
+def browse():
+    """Browse your playlists and pick tracks to play interactively."""
+    _require_mpv()
+    from yt_cli_player.api.youtube import get_playlists, get_all_playlist_items
+    from yt_cli_player.ui.browser import show_playlists, show_playlist_items
+    from yt_cli_player.player.mpv_player import Player
+    from yt_cli_player.ui.now_playing import run_player_ui
+
+    with console.status("Fetching playlists..."):
+        try:
+            playlists = get_playlists()
+        except RuntimeError as e:
+            console.print(f"[red]{e}[/red]")
+            sys.exit(1)
+
+    playlist = show_playlists(playlists)
+    if not playlist:
+        return
+
+    videos = _fetch_playlist(playlist.title, playlist.id)
+    if not videos:
+        return
+
+    page = 0
+    while True:
+        selected, action = show_playlist_items(videos, playlist.title, page)
+        if action == "quit":
+            return
+        if action == "next":
+            page += 1
+        elif action == "prev":
+            page -= 1
+        elif action == "back":
+            playlist = show_playlists(playlists)
+            if not playlist:
+                return
+            videos = _fetch_playlist(playlist.title, playlist.id)
+            if not videos:
+                return
+            page = 0
+        elif action == "play" and selected:
+            start = videos.index(selected)
+            run_player_ui(Player(videos, start_index=start))
+            return
+
+
+@main.command()
+@click.option("--shuffle", is_flag=True, help="Shuffle the queue before playing.")
+def play(shuffle):
+    """Play your Liked Videos. Add --shuffle to randomise order."""
+    _require_mpv()
+    from yt_cli_player.api.youtube import get_all_playlist_items
+    from yt_cli_player.player.mpv_player import Player
+    from yt_cli_player.ui.now_playing import run_player_ui
+
+    videos = _fetch_playlist("Liked Videos", "LL")
+    if not videos:
+        return
+    if shuffle:
+        random.shuffle(videos)
+    run_player_ui(Player(videos))
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def _require_mpv() -> None:
+    if not shutil.which("mpv"):
+        console.print("[red]mpv not found.[/red] Install it with: [bold]sudo apt install mpv[/bold]")
+        sys.exit(1)
+
+
+def _fetch_playlist(title: str, playlist_id: str):
+    from yt_cli_player.api.youtube import get_all_playlist_items
+    with console.status(f"Fetching [bold]{title}[/bold]..."):
+        try:
+            videos = list(get_all_playlist_items(playlist_id))
+        except RuntimeError as e:
+            console.print(f"[red]{e}[/red]")
+            sys.exit(1)
+    if not videos:
+        console.print("[yellow]No playable videos found in this playlist.[/yellow]")
+    return videos
