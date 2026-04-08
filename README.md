@@ -1,5 +1,11 @@
 # yt-music
 
+<img width="1248" height="610" alt="Bildschirmfoto vom 2026-04-08 13-00-32" src="https://github.com/user-attachments/assets/33cf66ff-ad40-47b9-a1f4-1468c4689222" />
+
+
+<img width="967" height="411" alt="Bildschirmfoto vom 2026-04-08 12-41-23" src="https://github.com/user-attachments/assets/9e2cb609-fe46-4024-b714-adabd03d17c3" />
+
+
 A terminal-based YouTube music player for Ubuntu. Browse your playlists and play audio directly from the command line — no browser, no video, no ads.
 
 ## Features
