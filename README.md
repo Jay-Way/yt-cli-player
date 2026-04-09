@@ -155,6 +155,8 @@ While a track is playing:
 
 ### Equalizer visualizer
 
+<img width="614" height="366" alt="Bildschirmfoto vom 2026-04-09 11-54-52" src="https://github.com/user-attachments/assets/2679548e-3cad-400a-a604-3d74b06ce2a7" />
+
 Requires [cava](https://github.com/karlstav/cava):
 
 ```bash
@@ -168,6 +170,9 @@ SHOW_VISUALIZER=false
 ```
 
 ### Album art
+
+<img width="848" height="596" alt="Bildschirmfoto vom 2026-04-09 11-55-51" src="https://github.com/user-attachments/assets/b5f7aa2a-6029-4b7a-a0a9-8d0aa903f834" />
+
 
 Requires [chafa](https://hpjansson.org/chafa/):
 
