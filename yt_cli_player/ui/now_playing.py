@@ -11,6 +11,7 @@ from rich.text import Text
 from yt_cli_player.api.models import Video
 from yt_cli_player.config import SHOW_THUMBNAIL, SHOW_VISUALIZER
 from yt_cli_player.player.mpv_player import Player
+from yt_cli_player.ui.thumbnail import fetch_thumbnail, get_dominant_color, render_thumbnail
 from yt_cli_player.ui.visualizer import CavaVisualizer
 
 console = Console()
@@ -25,7 +26,6 @@ _color_lock = threading.Lock()
 def _load_thumbnail(video: Video) -> None:
     """Download thumbnail, compute dominant color, and optionally render it.
     Runs in a background thread; results land in the module-level caches."""
-    from yt_cli_player.ui.thumbnail import fetch_thumbnail, render_thumbnail, get_dominant_color
     vid_id = video.video_id
 
     with _thumb_lock:
@@ -81,8 +81,8 @@ def _make_panel(
     else:
         status = "[green]▶ PLAYING[/green]"
 
-    bar = _progress_bar(elapsed, total)
-    time_line = f"{_fmt_time(elapsed)}  {bar}  {_fmt_time(total)}"
+    progress = _progress_bar(elapsed, total)
+    time_line = f"{_fmt_time(elapsed)}  {progress}  {_fmt_time(total)}"
     controls = "[dim]space[/dim] pause/resume   [dim]n[/dim] next   [dim]q[/dim] quit"
 
     parts: list = []

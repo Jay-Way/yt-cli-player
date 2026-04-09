@@ -56,7 +56,7 @@ class Player:
         if ytdlp_opt:
             cmd.append(ytdlp_opt)
         cmd.append(video.url)
-        self._proc = subprocess.Popen(
+        self._proc = subprocess.Popen(  # pylint: disable=consider-using-with
             cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         if wait_for_socket(timeout=5.0):
@@ -84,10 +84,18 @@ class Player:
             # spin through the entire queue in a second.
             if elapsed < 3.0:
                 try:
-                    lines = [l for l in _MPV_LOG.read_text(errors="replace").splitlines() if l.strip()]
-                    self.last_error = lines[-1] if lines else f"mpv exited immediately (exit code {self._proc.returncode})"
-                except Exception:
-                    self.last_error = f"mpv exited immediately (exit code {self._proc.returncode})"
+                    log_lines = [
+                        ln for ln in _MPV_LOG.read_text(errors="replace").splitlines()
+                        if ln.strip()
+                    ]
+                    self.last_error = (
+                        log_lines[-1] if log_lines
+                        else f"mpv exited immediately (exit code {self._proc.returncode})"
+                    )
+                except (OSError, IndexError):
+                    self.last_error = (
+                        f"mpv exited immediately (exit code {self._proc.returncode})"
+                    )
                 time.sleep(2.0)
             self._index += 1
 

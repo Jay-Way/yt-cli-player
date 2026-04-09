@@ -41,7 +41,7 @@ class CavaVisualizer:
         if not self.available():
             return
         _CAVA_CONF.write_text(_CONF_TEMPLATE.format(bars=self.bars, max_val=_MAX_VAL))
-        self._proc = subprocess.Popen(
+        self._proc = subprocess.Popen(  # pylint: disable=consider-using-with
             ["cava", "-p", str(_CAVA_CONF)],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,

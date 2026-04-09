@@ -1,0 +1,10 @@
+[MESSAGES CONTROL]
+disable =
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+
+[TYPECHECK]
+# googleapiclient.discovery.build() returns a Resource whose members are
+# generated dynamically from the API discovery document; pylint can't see them.
+generated-members = googleapiclient.*

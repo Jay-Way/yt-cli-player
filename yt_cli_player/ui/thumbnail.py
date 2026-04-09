@@ -23,7 +23,7 @@ def fetch_thumbnail(url: str, video_id: str) -> Path | None:
     try:
         urllib.request.urlretrieve(url, path)
         return path
-    except Exception:
+    except (urllib.error.URLError, OSError):
         return None
 
 
@@ -34,7 +34,7 @@ def get_dominant_color(path: Path) -> str:
         return "cyan"
     try:
         img = Image.open(path).convert("RGB")
-        img = img.resize((50, 50), Image.LANCZOS)
+        img = img.resize((50, 50), Image.Resampling.LANCZOS)
         pixels = list(img.getdata())
         n = len(pixels)
         r = sum(p[0] for p in pixels) / n / 255
@@ -47,7 +47,7 @@ def get_dominant_color(path: Path) -> str:
         v = max(0.65, min(1.0, v * 1.2))
         r, g, b = colorsys.hsv_to_rgb(h, s, v)
         return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
-    except Exception:
+    except (OSError, ValueError, ZeroDivisionError):
         return "cyan"
 
 
@@ -62,7 +62,8 @@ def render_thumbnail(path: Path, width: int = 40, height: int = 11) -> str | Non
             capture_output=True,
             text=True,
             timeout=10,
+            check=False,
         )
         return result.stdout or None
-    except Exception:
+    except (OSError, subprocess.TimeoutExpired):
         return None

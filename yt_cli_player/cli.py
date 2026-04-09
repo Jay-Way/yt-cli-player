@@ -1,9 +1,19 @@
+import os
 import random
 import shutil
 import sys
 
 import click
 from rich.console import Console
+
+from yt_cli_player.api.youtube import get_all_playlist_items, get_playlists
+from yt_cli_player.auth.oauth import login as do_login
+from yt_cli_player.auth.token_store import delete_token
+from yt_cli_player.config import IPC_SOCKET_PATH
+from yt_cli_player.player.ipc import MpvIPC
+from yt_cli_player.player.mpv_player import Player
+from yt_cli_player.ui.browser import show_playlist_items, show_playlists
+from yt_cli_player.ui.now_playing import run_player_ui
 
 console = Console()
 
@@ -16,7 +26,6 @@ def main():
 @main.command()
 def login():
     """Authenticate with your YouTube account via OAuth."""
-    from yt_cli_player.auth.oauth import login as do_login
     try:
         channel = do_login()
         console.print(f"[green]Logged in as:[/green] {channel}")
@@ -28,7 +37,6 @@ def login():
 @main.command()
 def logout():
     """Clear stored authentication token."""
-    from yt_cli_player.auth.token_store import delete_token
     delete_token()
     console.print("[yellow]Logged out.[/yellow]")
 
@@ -37,11 +45,6 @@ def logout():
 def browse():
     """Browse your playlists and pick tracks to play interactively."""
     _require_mpv()
-    from yt_cli_player.api.youtube import get_playlists, get_all_playlist_items
-    from yt_cli_player.ui.browser import show_playlists, show_playlist_items
-    from yt_cli_player.player.mpv_player import Player
-    from yt_cli_player.ui.now_playing import run_player_ui
-
     with console.status("Fetching playlists..."):
         try:
             playlists = get_playlists()
@@ -83,10 +86,6 @@ def browse():
 @main.command()
 def status():
     """Show what is currently playing (requires an active yt-music session)."""
-    import os
-    from yt_cli_player.config import IPC_SOCKET_PATH
-    from yt_cli_player.player.ipc import MpvIPC
-
     if not os.path.exists(IPC_SOCKET_PATH):
         console.print("[yellow]Nothing is playing.[/yellow]")
         return
@@ -114,9 +113,9 @@ def status():
     state = "[yellow]⏸ PAUSED[/yellow]" if paused else "[green]▶ PLAYING[/green]"
     bar_width = 30
     filled = min(int(bar_width * pos / duration), bar_width) if duration > 0 else 0
-    bar = "█" * filled + "─" * (bar_width - filled)
+    progress = "█" * filled + "─" * (bar_width - filled)
     console.print(f"{state}  {title}")
-    console.print(f"[dim]{fmt(pos)}  {bar}  {fmt(duration)}[/dim]")
+    console.print(f"[dim]{fmt(pos)}  {progress}  {fmt(duration)}[/dim]")
 
 
 @main.command()
@@ -124,10 +123,6 @@ def status():
 def play(shuffle):
     """Play your Liked Videos. Add --shuffle to randomise order."""
     _require_mpv()
-    from yt_cli_player.api.youtube import get_all_playlist_items
-    from yt_cli_player.player.mpv_player import Player
-    from yt_cli_player.ui.now_playing import run_player_ui
-
     videos = _fetch_playlist("Liked Videos", "LL")
     if not videos:
         return
@@ -140,12 +135,11 @@ def play(shuffle):
 
 def _require_mpv() -> None:
     if not shutil.which("mpv"):
-        console.print("[red]mpv not found.[/red] Install it with: [bold]sudo apt install mpv[/bold]")
+        console.print("[red]mpv not found.[/red] Install with: [bold]sudo apt install mpv[/bold]")
         sys.exit(1)
 
 
 def _fetch_playlist(title: str, playlist_id: str):
-    from yt_cli_player.api.youtube import get_all_playlist_items
     with console.status(f"Fetching [bold]{title}[/bold]..."):
         try:
             videos = list(get_all_playlist_items(playlist_id))

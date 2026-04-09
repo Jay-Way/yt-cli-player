@@ -54,7 +54,7 @@ def get_playlist_items(
 ) -> tuple[list[Video], str | None]:
     """Returns (videos_on_page, next_page_token). next_page_token is None on last page."""
     service = _build_service()
-    kwargs: dict = dict(part="snippet,contentDetails", playlistId=playlist_id, maxResults=50)
+    kwargs: dict = {"part": "snippet,contentDetails", "playlistId": playlist_id, "maxResults": 50}
     if page_token:
         kwargs["pageToken"] = page_token
 
