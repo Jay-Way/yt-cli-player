@@ -16,6 +16,7 @@ class Video:
     channel: str
     duration_seconds: int = 0
     position: int = 0
+    thumbnail_url: str = ""
 
     @property
     def duration_str(self) -> str:

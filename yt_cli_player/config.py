@@ -14,5 +14,10 @@ KEYRING_SERVICE = "yt-cli-player"
 KEYRING_USERNAME = "oauth_token"
 YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.readonly"]
 
+SHOW_THUMBNAIL = os.getenv("SHOW_THUMBNAIL", "false").lower() not in ("false", "0", "")
+SHOW_VISUALIZER = os.getenv("SHOW_VISUALIZER", "true").lower() not in ("false", "0", "")
+THUMBS_CACHE_DIR = CACHE_DIR / "thumbs"
+
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+THUMBS_CACHE_DIR.mkdir(parents=True, exist_ok=True)

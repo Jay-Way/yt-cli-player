@@ -129,7 +129,7 @@ yt-cli-player/
 
 ---
 
-### Phase 6 — Thumbnail Display in Now-Playing UI
+### Phase 6 — Thumbnail Display + Eye Candy ✅
 
 Show the current track's YouTube thumbnail inside the terminal while a track is playing.
 
@@ -151,9 +151,12 @@ Show the current track's YouTube thumbnail inside the terminal while a track is 
 
 5. **`setup.sh`** — add `sudo apt install -y chafa` to the system-dependencies line (alongside mpv). Add a note that chafa is optional; the player works without it.
 
-**Gotchas:**
-- Thumbnail download must be non-blocking; render the panel without the thumbnail until the download completes.
-- Cache rendered strings by video ID so chafa is only called once per track.
+**Implemented:**
+- `ui/thumbnail.py` — `fetch_thumbnail`, `render_thumbnail`, `get_dominant_color` (Pillow, stdlib colorsys)
+- `ui/visualizer.py` — `CavaVisualizer`: writes a cava config to `CACHE_DIR/cava.conf`, launches cava as a subprocess in raw ASCII mode, reads bar values in a background thread; `render()` returns a Rich `Text` of `▁▂▃▄▅▆▇█` chars styled with the dominant color
+- `ui/now_playing.py` — thumbnail and color fetched in a background thread per track; panel border uses the dominant color; CAVA bars rendered above the controls; refresh rate bumped to 4 Hz for smooth animation
+- `config.py` — `SHOW_THUMBNAIL` (default off), `SHOW_VISUALIZER` (default on)
+- `pyproject.toml` — added `Pillow>=10.0`
 - Sixel/kitty protocols can interfere with Rich's alternate screen buffer — default to `--format=symbols` (Unicode block art) which is universally safe; advanced protocol selection can be a follow-up.
 
 ---

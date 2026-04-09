@@ -13,6 +13,7 @@ dependencies = [
     "google-auth-oauthlib>=1.0",
     "keyring>=24.0",
     "python-dotenv>=1.0",
+    "Pillow>=10.0",
 ]
 
 [project.scripts]

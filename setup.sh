@@ -6,6 +6,10 @@ echo "=== yt-cli-player setup ==="
 # Install system dependencies
 echo "Installing system dependencies..."
 sudo apt install -y mpv python3.13-venv
+# chafa is optional — enables thumbnail display in the now-playing UI
+sudo apt install -y chafa 2>/dev/null || echo "Note: chafa not found — thumbnail display will be disabled. Install with: sudo apt install chafa"
+# cava is optional — enables the equalizer visualizer in the now-playing UI
+sudo apt install -y cava 2>/dev/null || echo "Note: cava not found — visualizer will be disabled. Install with: sudo apt install cava"
 
 # Create and activate virtualenv
 if [ ! -d ".venv" ]; then

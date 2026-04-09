@@ -1,8 +1,5 @@
 # yt-music
 
-<img width="1248" height="610" alt="Bildschirmfoto vom 2026-04-08 13-00-32" src="https://github.com/user-attachments/assets/33cf66ff-ad40-47b9-a1f4-1468c4689222" />
-
-
 <img width="967" height="411" alt="Bildschirmfoto vom 2026-04-08 12-41-23" src="https://github.com/user-attachments/assets/9e2cb609-fe46-4024-b714-adabd03d17c3" />
 
 
@@ -16,6 +13,9 @@ A terminal-based YouTube music player for Ubuntu. Browse your playlists and play
 - Shuffle any playlist
 - Audio-only playback via mpv — no video downloaded or rendered
 - Live now-playing display with progress bar
+- Panel border color adapts to the dominant color of the current track's thumbnail
+- Real-time equalizer visualizer powered by [cava](https://github.com/karlstav/cava) (optional)
+- Album art display in the terminal via [chafa](https://hpjansson.org/chafa/) (optional, off by default)
 - Keyboard controls: pause, skip, quit
 - Skips deleted or private videos automatically
 - Pagination for large playlists
@@ -118,6 +118,9 @@ yt-music logout    # Clear stored token
 
 ### Browse playlists interactively
 
+<img width="1248" height="610" alt="Bildschirmfoto vom 2026-04-08 13-00-32" src="https://github.com/user-attachments/assets/33cf66ff-ad40-47b9-a1f4-1468c4689222" />
+
+
 ```bash
 yt-music browse
 ```
@@ -147,6 +150,45 @@ While a track is playing:
 | `space` | Pause / resume |
 | `n` | Skip to next track |
 | `q` or `Ctrl+C` | Stop and quit |
+
+## Optional features
+
+### Equalizer visualizer
+
+Requires [cava](https://github.com/karlstav/cava):
+
+```bash
+sudo apt install cava
+```
+
+Once installed, a row of `▁▂▃▄▅▆▇█` bars appears in the now-playing panel, animated in real time and colored to match the current track. To disable:
+
+```
+SHOW_VISUALIZER=false
+```
+
+### Album art
+
+Requires [chafa](https://hpjansson.org/chafa/):
+
+```bash
+sudo apt install chafa
+```
+
+Displays the track thumbnail as Unicode block art above the track info. Off by default. To enable:
+
+```
+SHOW_THUMBNAIL=true
+```
+
+### Configuration
+
+Create a `.env` file in the project root (see `.env.example`) to set options permanently:
+
+```env
+SHOW_VISUALIZER=true
+SHOW_THUMBNAIL=false
+```
 
 ## Troubleshooting
 

@@ -68,12 +68,20 @@ def get_playlist_items(
         if not snippet.get("thumbnails"):  # deleted / private
             continue
         vid_id = snippet["resourceId"]["videoId"]
+        thumbnails = snippet.get("thumbnails", {})
+        thumb_url = (
+            thumbnails.get("high", {}).get("url")
+            or thumbnails.get("medium", {}).get("url")
+            or thumbnails.get("default", {}).get("url")
+            or ""
+        )
         video_ids.append(vid_id)
         videos.append(Video(
             video_id=vid_id,
             title=snippet["title"],
             channel=snippet.get("videoOwnerChannelTitle", ""),
             position=snippet["position"],
+            thumbnail_url=thumb_url,
         ))
 
     if video_ids:

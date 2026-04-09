@@ -4,13 +4,45 @@ import termios
 import threading
 import tty
 import time
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
+from rich.text import Text
 from yt_cli_player.api.models import Video
+from yt_cli_player.config import SHOW_THUMBNAIL, SHOW_VISUALIZER
 from yt_cli_player.player.mpv_player import Player
+from yt_cli_player.ui.visualizer import CavaVisualizer
 
 console = Console()
+
+# Per-session caches keyed by video_id.
+_thumb_cache: dict[str, str | None] = {}
+_thumb_lock = threading.Lock()
+_color_cache: dict[str, str] = {}
+_color_lock = threading.Lock()
+
+
+def _load_thumbnail(video: Video) -> None:
+    """Download thumbnail, compute dominant color, and optionally render it.
+    Runs in a background thread; results land in the module-level caches."""
+    from yt_cli_player.ui.thumbnail import fetch_thumbnail, render_thumbnail, get_dominant_color
+    vid_id = video.video_id
+
+    with _thumb_lock:
+        if vid_id in _thumb_cache:
+            return
+        _thumb_cache[vid_id] = None  # mark as in-progress
+
+    path = fetch_thumbnail(video.thumbnail_url, vid_id)
+
+    if path:
+        color = get_dominant_color(path)
+        with _color_lock:
+            _color_cache[vid_id] = color
+
+    rendered = render_thumbnail(path) if path and SHOW_THUMBNAIL else None
+    with _thumb_lock:
+        _thumb_cache[vid_id] = rendered
 
 
 def _fmt_time(seconds: float) -> str:
@@ -27,9 +59,16 @@ def _progress_bar(elapsed: float, total: float, width: int = 30) -> str:
     return "█" * filled + "─" * (width - filled)
 
 
-def _make_panel(player: Player, current: Video | None) -> Panel:
+def _make_panel(
+    player: Player,
+    current: Video | None,
+    visualizer: CavaVisualizer | None = None,
+) -> Panel:
     if not current:
         return Panel("[dim]No track playing[/dim]", title="[bold cyan]yt-music[/bold cyan]")
+
+    with _color_lock:
+        color = _color_cache.get(current.video_id, "cyan")
 
     elapsed = player.get_position() or 0.0
     total = current.duration_seconds
@@ -46,25 +85,54 @@ def _make_panel(player: Player, current: Video | None) -> Panel:
     time_line = f"{_fmt_time(elapsed)}  {bar}  {_fmt_time(total)}"
     controls = "[dim]space[/dim] pause/resume   [dim]n[/dim] next   [dim]q[/dim] quit"
 
-    body = (
+    parts: list = []
+
+    if SHOW_THUMBNAIL:
+        with _thumb_lock:
+            rendered = _thumb_cache.get(current.video_id)
+        if rendered:
+            parts.append(Text.from_ansi(rendered))
+
+    parts.append(Text.from_markup(
         f"{status}\n\n"
         f"[bold]{current.title}[/bold]\n"
         f"[dim]{current.channel}[/dim]\n\n"
         f"{time_line}\n\n"
-        f"{controls}"
-    )
-    return Panel(body, title="[bold cyan]yt-music[/bold cyan]", border_style="cyan")
+    ))
+
+    if SHOW_VISUALIZER and visualizer and visualizer.is_active():
+        parts.append(visualizer.render(color))
+        parts.append(Text("\n\n"))
+
+    parts.append(Text.from_markup(controls))
+
+    body = Group(*parts) if len(parts) > 1 else parts[0]
+    return Panel(body, title="[bold cyan]yt-music[/bold cyan]", border_style=color)
 
 
 def run_player_ui(player: Player) -> None:
     current_video: Video | None = player.current
     stop_event = threading.Event()
 
+    visualizer = CavaVisualizer() if SHOW_VISUALIZER else None
+
+    def _maybe_load(video: Video) -> None:
+        """Start thumbnail fetch if either feature needs it."""
+        if video.thumbnail_url and (SHOW_THUMBNAIL or SHOW_VISUALIZER):
+            threading.Thread(target=_load_thumbnail, args=(video,), daemon=True).start()
+
     def on_track_change(video: Video) -> None:
         nonlocal current_video
         current_video = video
+        _maybe_load(video)
 
     player.on_track_change = on_track_change
+
+    if current_video:
+        _maybe_load(current_video)
+
+    if visualizer:
+        visualizer.start()
 
     play_thread = threading.Thread(target=player.play, daemon=True)
     play_thread.start()
@@ -101,15 +169,19 @@ def run_player_ui(player: Player) -> None:
     # screen=True uses the alternate screen buffer (like vim/htop).
     # It clears and redraws the whole screen each refresh instead of doing
     # cursor-up arithmetic, which breaks when terminal mode changes underneath it.
-    with Live(
-        _make_panel(player, current_video),
-        console=console,
-        refresh_per_second=2,
-        screen=True,
-    ) as live:
-        while not stop_event.is_set() and play_thread.is_alive():
-            live.update(_make_panel(player, current_video))
-            time.sleep(0.5)
+    try:
+        with Live(
+            _make_panel(player, current_video, visualizer),
+            console=console,
+            refresh_per_second=4,
+            screen=True,
+        ) as live:
+            while not stop_event.is_set() and play_thread.is_alive():
+                live.update(_make_panel(player, current_video, visualizer))
+                time.sleep(0.25)
+    finally:
+        if visualizer:
+            visualizer.stop()
 
     stop_event.set()
     play_thread.join(timeout=3)
