@@ -81,6 +81,45 @@ def browse():
 
 
 @main.command()
+def status():
+    """Show what is currently playing (requires an active yt-music session)."""
+    import os
+    from yt_cli_player.config import IPC_SOCKET_PATH
+    from yt_cli_player.player.ipc import MpvIPC
+
+    if not os.path.exists(IPC_SOCKET_PATH):
+        console.print("[yellow]Nothing is playing.[/yellow]")
+        return
+
+    try:
+        ipc = MpvIPC()
+    except OSError:
+        console.print("[yellow]Nothing is playing.[/yellow]")
+        return
+
+    try:
+        title = ipc.get_property("media-title") or "Unknown"
+        pos = ipc.get_property("time-pos") or 0.0
+        duration = ipc.get_property("duration") or 0.0
+        paused = ipc.get_property("pause") or False
+    finally:
+        ipc.close()
+
+    def fmt(s: float) -> str:
+        s = int(s)
+        m, s = divmod(s, 60)
+        h, m = divmod(m, 60)
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+    state = "[yellow]⏸ PAUSED[/yellow]" if paused else "[green]▶ PLAYING[/green]"
+    bar_width = 30
+    filled = min(int(bar_width * pos / duration), bar_width) if duration > 0 else 0
+    bar = "█" * filled + "─" * (bar_width - filled)
+    console.print(f"{state}  {title}")
+    console.print(f"[dim]{fmt(pos)}  {bar}  {fmt(duration)}[/dim]")
+
+
+@main.command()
 @click.option("--shuffle", is_flag=True, help="Shuffle the queue before playing.")
 def play(shuffle):
     """Play your Liked Videos. Add --shuffle to randomise order."""

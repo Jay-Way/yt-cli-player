@@ -45,6 +45,8 @@ cd yt-cli-player
 bash setup.sh
 ```
 
+You may need to install python first, or if it's already installed, check which version and update `setup.sh` it if necessary.
+For example, if you have python 3.13 installed, change `python3.12-venv` to `python3.13-venv` in `setup.sh`.
 This installs `mpv` and `python3.12-venv` via apt, creates a Python virtualenv, and installs the package and all dependencies.
 
 ### 3. Set up Google Cloud credentials

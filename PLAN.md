@@ -120,12 +120,41 @@ yt-cli-player/
 ---
 
 ### Phase 5 — Polish
-- [ ] `yt-music play --liked` shortcut (shuffled Liked Videos)
-- [ ] `yt-music status` — query IPC socket for current track info
-- [ ] Startup check: `shutil.which('mpv')` with helpful install error
-- [ ] Handle `RefreshError` → prompt re-login
+- [x] `yt-music play` plays Liked Videos by default; `--shuffle` flag randomises order (the separate `--liked` flag was not needed)
+- [x] `yt-music play --shuffle` flag
+- [x] Startup check: `shutil.which('mpv')` with helpful install error (`_require_mpv()` in `cli.py`)
+- [x] `yt-music status` — query IPC socket for current track info (reads `media-title`, `time-pos`, `duration`, `pause` from `/tmp/yt-cli-player.sock`)
+- [ ] Handle `RefreshError` → prompt re-login (`token_store.py` calls `creds.refresh()` but does not catch `google.auth.exceptions.RefreshError`)
 - [ ] JSON metadata cache in `~/.cache/yt-cli-player/` with 1-hour TTL
-- [ ] `yt-music play --shuffle` flag
+
+---
+
+### Phase 6 — Thumbnail Display in Now-Playing UI
+
+Show the current track's YouTube thumbnail inside the terminal while a track is playing.
+
+**Config option:** Add `SHOW_THUMBNAIL` (bool, default `true`) to `config.py`, readable from the `.env` file via `python-dotenv`. When `false`, the now-playing panel renders exactly as today.
+
+**Rendering approach:** Use the [chafa](https://hpjansson.org/chafa/) CLI tool to convert the thumbnail JPEG to Unicode/ANSI block art and embed the output as a `rich.Text` inside the now-playing panel. Chafa supports sixel, kitty, and block-character output and auto-detects the terminal's capabilities.
+
+**Implementation steps:**
+
+1. **`config.py`** — add `SHOW_THUMBNAIL = os.getenv("SHOW_THUMBNAIL", "true").lower() != "false"`.
+
+2. **`api/models.py`** — add a `thumbnail_url` field to `Video` (populated from `snippet.thumbnails.medium.url` or `high.url` in `youtube.py`).
+
+3. **`ui/thumbnail.py`** (new module):
+   - `fetch_thumbnail(url: str) -> Path | None` — download JPEG to a temp file in `CACHE_DIR/thumbs/<video_id>.jpg`, return cached path if already present.
+   - `render_thumbnail(path: Path, width: int = 24) -> str | None` — shell out to `chafa --size=<width>x12 --format=symbols <path>` and return the ANSI string, or `None` if chafa is not installed (`shutil.which("chafa")`).
+
+4. **`ui/now_playing.py`** — when `SHOW_THUMBNAIL` is true, fetch and render the thumbnail in a background thread (so a slow download doesn't stall the UI refresh), cache the rendered ANSI string per video ID, and prepend it to the panel body.
+
+5. **`setup.sh`** — add `sudo apt install -y chafa` to the system-dependencies line (alongside mpv). Add a note that chafa is optional; the player works without it.
+
+**Gotchas:**
+- Thumbnail download must be non-blocking; render the panel without the thumbnail until the download completes.
+- Cache rendered strings by video ID so chafa is only called once per track.
+- Sixel/kitty protocols can interfere with Rich's alternate screen buffer — default to `--format=symbols` (Unicode block art) which is universally safe; advanced protocol selection can be a follow-up.
 
 ---
 

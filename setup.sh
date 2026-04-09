@@ -5,7 +5,7 @@ echo "=== yt-cli-player setup ==="
 
 # Install system dependencies
 echo "Installing system dependencies..."
-sudo apt install -y mpv python3.12-venv
+sudo apt install -y mpv python3.13-venv
 
 # Create and activate virtualenv
 if [ ! -d ".venv" ]; then

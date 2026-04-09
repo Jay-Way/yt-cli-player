@@ -24,7 +24,6 @@ class Player:
         self._index = start_index
         self._proc: subprocess.Popen | None = None
         self._ipc: MpvIPC | None = None
-        self._log_fh = None
         self._stopped = False
         self.on_track_change = on_track_change
         self.last_error: str = ""  # last mpv stderr snippet, for display
@@ -43,20 +42,23 @@ class Player:
             if _YTDLP_PATH.exists()
             else ""
         )
+        # --log-file writes directly to a file regardless of --no-terminal,
+        # unlike stdout/stderr redirection which --no-terminal suppresses.
         cmd = [
             "mpv",
             "--no-video",
             "--no-terminal",
-            "--really-quiet",
+            "--msg-level=all=warn",
+            f"--log-file={_MPV_LOG}",
             "--ytdl-format=bestaudio/best",
             f"--input-ipc-server={IPC_SOCKET_PATH}",
         ]
         if ytdlp_opt:
             cmd.append(ytdlp_opt)
         cmd.append(video.url)
-        log_fh = open(_MPV_LOG, "ab")
-        self._proc = subprocess.Popen(cmd, stdout=log_fh, stderr=log_fh)
-        self._log_fh = log_fh
+        self._proc = subprocess.Popen(
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
         if wait_for_socket(timeout=5.0):
             time.sleep(0.15)  # let socket start accepting connections
             try:
@@ -75,9 +77,6 @@ class Player:
             self._proc.wait()
             elapsed = time.monotonic() - started_at
             self._close_ipc()
-            if self._log_fh:
-                self._log_fh.close()
-                self._log_fh = None
             if self._stopped:
                 break
             # If mpv exited in under 3 s it almost certainly failed (yt-dlp error,
@@ -85,9 +84,10 @@ class Player:
             # spin through the entire queue in a second.
             if elapsed < 3.0:
                 try:
-                    self.last_error = _MPV_LOG.read_text(errors="replace").splitlines()[-1]
+                    lines = [l for l in _MPV_LOG.read_text(errors="replace").splitlines() if l.strip()]
+                    self.last_error = lines[-1] if lines else f"mpv exited immediately (exit code {self._proc.returncode})"
                 except Exception:
-                    self.last_error = "mpv exited immediately — check ~/.cache/yt-cli-player/mpv.log"
+                    self.last_error = f"mpv exited immediately (exit code {self._proc.returncode})"
                 time.sleep(2.0)
             self._index += 1
 
